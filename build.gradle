@@ -1,0 +1,27 @@
+/* Module Build File */
+
+apply from: "${System.getenv("niagara_home")}/etc/gradle/niagara.gradle"
+description     = "Measures electrical demand and consumption"
+ext {
+  name            = "AdeptEnergy-rt"
+  project.group   = "Logicode"
+  project.version = "1.0"
+}
+niagaraModule {
+  preferredSymbol = "AE"
+  moduleName = "AdeptEnergy"
+  runtimeProfile = "rt"
+}
+
+dependencies {
+  compile "Tridium:nre:4.1"
+  compile "Tridium:baja:4.1"
+  compile "Tridium:bajaux-rt:4.1"
+  compile "Tridium:control-rt:4.1"
+  compile "Tridium:history-rt:4.1"
+}
+
+moduleTestJar {
+  from('srcTest') {
+  }
+}
