@@ -1,9 +1,12 @@
 package com.logicode.AdeptEnergy;
 
-import com.tridium.history.db.BLocalDbHistory;
-
 import javax.baja.naming.BOrd;
+import javax.baja.naming.OrdTarget;
+import javax.baja.status.BStatusString;
 import javax.baja.sys.*;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
 
 
 /**
@@ -14,93 +17,103 @@ import javax.baja.sys.*;
  */
 public class BEnergyTracker extends BComponent{
 
+    /*************************************************************************************************
+     * This Code will Export a History file and save it as a .csv.
+     *
+     * The "history" will be the bql query call for the history file you wish to create.
+     * The "historyName" will be the file name that it is saved as.
+     * The file is saved in the "Path" location.
+     * The "Path" must include a final "/" ,and the folder that you are saving to must already exist.
+     * @author  CMH, Xex-com		07/31/09
+     */
 
-    // boolean property: fooBar
-//    public static final Property fooBar = newProperty(0, true);
-//    public boolean getFooBar() { return getBoolean(fooBar); }
-//    public void setFooBar(boolean v) { setBoolean(fooBar, v); }
+        /**Enter the the bql query call for the history file you wish to create.*/
+        public static final Property history = newProperty(Flags.SUMMARY, new BStatusString());
+        public BStatusString getHistory() { return (BStatusString)get(history);}
+        public void setHistory (BStatusString v) {set(history,v);}
 
-    // int property: cool
-//    public static final Property cool = newProperty(0, 100);
-//    public int getCool() { return getInt(cool); }
-//    public void setCool(int v) { setInt(cool, v); }
+        /**Enter the filename of the export*/
+        public static final Property historyName = newProperty(Flags.SUMMARY, new BStatusString());
+        public BStatusString getHistoryName() { return (BStatusString)get(historyName);}
+        public void setHistoryName (BStatusString v) {set(historyName,v);}
 
-    // create a property consumption with a defalt val of 75.0
-    public static final Property consumption = newProperty(0, 75.0);
-    public double getConsumption() { return getDouble(consumption); }
-    public void setConsumption(double v) { setDouble(consumption, v); }
-
-    // double property: analog
-    public static final Property demand  = newProperty(0, 75.0);
-    public double getDemand () { return getDouble(demand); }
-    public void setDemand (double v) { setDouble(demand , v); }
-
-    // String property: description
-    public static final Property description = newProperty(0, "describe me");
-    public String getDescription() { return getString(description); }
-    public void setDescription(String x) { setString(description, x); }
-
-    // BObject property: timestamp
-    public static final Property timestamp = newProperty(0, BAbsTime.DEFAULT);
-    public BAbsTime getTimestamp() { return (BAbsTime)get(timestamp); }
-    public void setTimestamp(BAbsTime v) { set(timestamp, v); }
-
-
-    // action: makeMyDay
-    public static final Action calculateUsage = newAction(0);
-    public void calculateUsage() { invoke(calculateUsage, null, null); }
-    public void doCalculateUsage() {  System.out.println("Usage Calculated!!"); }
-
-
-    public static final Property BQLQuery = newProperty(0, "describe me");
-    public String getBQLQuery() { return getString(BQLQuery); }
-    public void setBQLQuery(String v) { setString(BQLQuery, v); }
-
-    // action: history
-    public static final Action retHistory = newAction(0);
-    public void retHistory() {
-        invoke(retHistory, null, null);
-    }
-    public void doRetHistory(){
-
-        BLocalDbHistory db = (BLocalDbHistory) BOrd.make(getBQLQuery()).get();
+        /**Enter the path for the .CSV file.  Default is the Daemon folder.  Must include a final "/" ,and the folder that you are saving to must already exist.*/
+        public static final Property path = newProperty(Flags.SUMMARY, new BStatusString());
+        public BStatusString getPath() { return (BStatusString)get(path);}
+        public void setPath (BStatusString v) {set(path,v);}
 
 
 
+        /**
+         * This action:
+         *   - executes bql query which returns a ITable
+         *   - formats the table as an in-memory CSV file
+         *   - saves the CSV file as an file
+         */
+        public static final Action execute = newAction(0);
+        public void execute(){
+            invoke(execute, null);
+        }
+        public void doExecute(){
+            try{
+                OrdTarget table = query();
+                System.out.print("Table");
+                System.out.println(table);
+                //the arg to get the historyname
+                hist(getHistoryName().toString() ,table);
+            }
+            catch(Exception e){
+                System.out.println(e.toString());
+            }
+        }
 
-        //create an istance of the history db
-//        BHistoryDatabase db =((BHistoryService) Sys.getService(BHistoryService.TYPE)).getDatabase();
-//        System.out.print(db);
+        /**
+         * Perform a bql query which returns an OrdTarget for a BITable
+         */
+        private OrdTarget query()
+                throws Exception
+        {
+            System.out.println("Query result: ");
+            System.out.println(BOrd.make(getHistory().getValue()).resolve());
+            return BOrd.make(getHistory().getValue()).resolve();
+        }
 
-//        try (HistorySpaceConnection conn = db.getConnection(null))
-//        {
-//            BIHistory history = conn.getHistory(null);
-//
-//            BAbsTime startTime = conn.getFirstTimestamp(history);
-//            //creates an ABSTIME and make a BMmont
-//            BAbsTime endTime = BAbsTime.make(2014, BMonth.make(0), 1);
-//
-//            BITable<BHistoryRecord> collection = conn.timeQuery(history, startTime, endTime);
-//            if (collection != null)
-//            {
-//                try(Cursor<BHistoryRecord> cursor = collection.cursor())
-//                {
-//                    while (cursor.next())
-//                    {
-//                        BHistoryRecord rec = cursor.get();
-//                        if (rec instanceof BNumericTrendRecord)
-//                        {
-//                            System.out.print(rec);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-    }
 
-    // topic: exploded
-    public static final Topic exploded = newTopic(0);
-    public void fireExploded(BString event) { fire(exploded, event, null); }
+
+        /**
+         * This action saves the converted History file in the Path specified using the History name as the file name.
+         */
+
+        private void hist(String fileName, OrdTarget attachment)
+                throws Exception
+        {
+            try
+            {
+
+
+                System.out.print(fileName);
+                System.out.print("Attachment: ");
+                System.out.println(attachment);
+                FileOutputStream fos = new FileOutputStream( getPath().getValue() + getHistoryName().getValue() + ".csv", false);
+                System.out.print("Arg for output stream");
+                System.out.println(getPath().getValue() + getHistoryName().getValue() + ".csv");
+                System.out.print("FileOutputStream: ");
+                System.out.println(fos);
+                ObjectOutputStream oos = new ObjectOutputStream (fos);
+                System.out.print("ObjectOutputStream: ");
+                System.out.println(oos);
+               // oos.writeObject(attachment);
+                oos.close();
+            }
+            catch (FileNotFoundException fnfe)
+            {
+                System.out.println( " Unable to find " + getHistoryName() + ".csv" );
+            }
+        }
+        //todo set an icon
+//        public BIcon getIcon() { return icon; }
+//        private static final BIcon icon = BIcon.make("module://axCommunity/org/axcommunity/niagara/graphics/XENCOM_LogoMini.png");
+
     ////////////////////////////////////////////////////////////////
 // Type
 ////////////////////////////////////////////////////////////////
